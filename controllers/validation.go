@@ -23,7 +23,6 @@ var errorSourceNotSupported = errors.New(ErrorSourceNotSupported)
 var errorTypeNotSupported = errors.New(ErrorTypeNotSupported)
 
 func ValidateUser(usr models.User) error {
-
 	if usr.Username == "" || usr.Password == "" {
 		log.Println(errorMissingArgument.Error())
 		return errorMissingArgument
@@ -74,6 +73,7 @@ func ValidateSendMessage(req Message) error {
 	return nil
 }
 
+// Parse int from string, expect greater than zero
 func parsePositiveInt(str string) (int, error) {
 	intVal, parseErr := strconv.ParseInt(str, 10, 64)
 	if parseErr != nil {
@@ -85,6 +85,7 @@ func parsePositiveInt(str string) (int, error) {
 	return int(intVal), nil
 }
 
+// Parse query parameters and validate them
 func ParseAndValidateGetMessageRequest(r *http.Request) (req GetMessagesRequest, err error) {
 	params := r.URL.Query()
 	// parse recipient, required

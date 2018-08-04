@@ -114,13 +114,13 @@ func (dao *DAO) SendMessage(msg Message) (int, string, error) {
 }
 
 func (dao *DAO) GetMessages(recipient_id int, msg_id int, limit int) ([]Message, error) {
-
 	tx, err := dao.db.Begin()
 	if err != nil {
 		log.Println("error starting Tx", err.Error())
 		return nil, err
 	}
 
+	// Retrieve messages of three types(text, image, video)
 	query := `SELECT messages.msg_id, sender_id, recipient_id, type, msg, width, height, i_url, v_url, source, created_on
 			  FROM messages
 			  LEFT JOIN texts ON messages.msg_id = texts.msg_id
@@ -139,9 +139,9 @@ func (dao *DAO) GetMessages(recipient_id int, msg_id int, limit int) ([]Message,
 	defer res.Close()
 
 	msgs := []Message{}
-
 	for res.Next() {
 		var msg Message
+		// Retrieving both image and video url, Message url is set later based on message type
 		var imageUrl sql.NullString
 		var videoUrl sql.NullString
 		err := res.Scan(&msg.MsgID, &msg.SenderID, &msg.RecipientID, &msg.Type, &msg.Message, &msg.Width, &msg.Height, &imageUrl, &videoUrl, &msg.Source, &msg.TimeStamp)

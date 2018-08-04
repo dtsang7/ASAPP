@@ -20,6 +20,7 @@ type GetMessagesRequest struct {
 	StartMsgID  int `json:"start"`
 	Limit       int
 }
+
 type GetMessagesResponse struct {
 	Messages []Message `json:"messages"`
 }
@@ -46,17 +47,28 @@ type SendMessageResponse struct {
 	Timestamp string
 }
 
+// verify user id in the toke matches user id in the request body
+func verifyTokenID(r *http.Request, id int) bool {
+	user := r.Context().Value("user")
+	tokenID, found := user.(*jwt.Token).Claims.(jwt.MapClaims)["id"]
+	if !found {
+		return false
+	}
+	if id, ok := tokenID.(float64); !ok || id != float64(id) {
+		return false
+	}
+	return true
+}
+
 func (h Handler) SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	var req Message
 	json.NewDecoder(r.Body).Decode(&req)
 
-	//validate
 	err := ValidateSendMessage(req)
 	if err != nil {
 		WriteHttpError(err, w)
 		return
 	}
-
 	if !verifyTokenID(r, req.SenderID) {
 		WriteHttpError(errorMismatchIDMessage, w)
 		return
@@ -109,10 +121,6 @@ func (h Handler) GetMessagesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Limit == 0 {
-		req.Limit = 100 //default
-	}
-
 	dbMsgs, err := h.DB.GetMessages(req.RecipientID, req.StartMsgID, req.Limit)
 	var messages []Message
 	for _, dbMsg := range dbMsgs {
@@ -154,16 +162,4 @@ func (h Handler) GetMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	if jsonErr != nil {
 		http.Error(w, "Write error", http.StatusInternalServerError)
 	}
-}
-
-func verifyTokenID(r *http.Request, id int) bool {
-	user := r.Context().Value("user")
-	tokenID, found := user.(*jwt.Token).Claims.(jwt.MapClaims)["id"]
-	if !found {
-		return false
-	}
-	if id, ok := tokenID.(float64); !ok || id != float64(id) {
-		return false
-	}
-	return true
 }

@@ -1,5 +1,6 @@
 package models
 
+// Check database health
 func (dao *DAO) CheckDB() (int, error) {
 	var res int
 	err := dao.db.QueryRow("SELECT 1").Scan(&res)

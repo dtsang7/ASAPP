@@ -7,7 +7,6 @@ import (
 )
 
 func (h Handler) Authenticate(user models.User) (int, string, error) {
-
 	var tokenString string
 	id, err := h.DB.LoginUser(user)
 	if err != nil {
@@ -20,17 +19,16 @@ func (h Handler) Authenticate(user models.User) (int, string, error) {
 	return id, tokenString, nil
 }
 
+// create jwt token
 func createToken(id int) (string, error) {
-
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":  id,
 		"exp": time.Now().Add(time.Minute * 300).Unix(),
 	})
-
+	// This should be an actual secret
 	tokenString, err := token.SignedString([]byte("secret"))
 	if err != nil {
 		return "", err
 	}
-
 	return tokenString, nil
 }

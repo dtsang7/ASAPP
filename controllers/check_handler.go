@@ -11,10 +11,11 @@ type Health struct {
 }
 
 type Handler struct {
-	DB *models.DAO
+	DB        *models.DAO
+	JWTSecret string
 }
 
-//handles check
+// checks system health
 func (h Handler) CheckHandler(w http.ResponseWriter, r *http.Request) {
 	var res int
 	res, err := h.DB.CheckDB()

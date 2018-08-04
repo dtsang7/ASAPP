@@ -14,47 +14,12 @@ import (
 	"time"
 )
 
-var baseUrl string
-
 const (
 	waitTime    = time.Second * 30
 	contentType = "application/json"
 )
 
-func TestMain(m *testing.M) {
-	if err := os.Remove("challenge_test.db"); err != nil {
-		log.Println("unable to remove file", err.Error())
-	}
-
-	os.Setenv("ASAPP_ENV", "test")
-
-	// starting app
-	go main()
-
-	config, _ := config.GetConfig("test")
-	baseUrl = "http://" + config.Host + ":" + config.Port
-
-	mult := time.Second * 1
-	resp, cErr := http.Post(baseUrl+"/check", contentType, nil)
-	for cErr != nil && mult < waitTime {
-		time.Sleep(mult)
-		resp, cErr = http.Post(baseUrl+"/check", contentType, nil)
-		mult = mult * 2
-	}
-	if cErr != nil {
-		log.Fatal("unable to connect", cErr.Error())
-	}
-
-	var health controllers.Health
-	json.NewDecoder(resp.Body).Decode(&health)
-	if health.Health != "ok" {
-		log.Fatal("health check failed")
-	}
-
-	code := m.Run()
-	os.Unsetenv("ASAPP_ENV")
-	os.Exit(code)
-}
+var baseUrl string
 
 func assertEqual(t *testing.T, a interface{}, b interface{}) {
 	if a != b {
@@ -91,6 +56,48 @@ func createUserHelper(username, password string) (int, error) {
 	var cUser controllers.CreateUserResponse
 	json.NewDecoder(resp.Body).Decode(&cUser)
 	return cUser.Id, nil
+}
+
+func waitOnServerStart() {
+	mult := time.Second * 1
+	for mult < waitTime {
+		resp, cErr := http.Post(baseUrl+"/check", contentType, nil)
+		if cErr == nil {
+			var health controllers.Health
+			json.NewDecoder(resp.Body).Decode(&health)
+			if health.Health == "ok" {
+				return
+			}
+		}
+		time.Sleep(mult)
+		mult = mult * 2
+	}
+	log.Fatal("unable to connect")
+}
+
+func TestMain(m *testing.M) {
+	// clean up test database before tests
+	if err := os.Remove("challenge_test.db"); err != nil {
+		log.Println("unable to remove file", err.Error())
+	}
+	// for server to load test config
+	os.Setenv("ASAPP_ENV", "test")
+	// starting app in a goroutine
+	go main()
+
+	// load test config
+	config, _ := config.GetConfig("test")
+	baseUrl = "http://" + config.Host + ":" + config.Port
+
+	// wait for server to start
+	waitOnServerStart()
+
+	// run tests
+	code := m.Run()
+
+	// clean up
+	os.Unsetenv("ASAPP_ENV")
+	os.Exit(code)
 }
 
 func TestLoginUser(t *testing.T) {
@@ -166,6 +173,7 @@ Test Scenario:
 1. Create two users(user1 and user2) and login
 2. User1 send 3 messages to user2 and user2 send 1 message to user1
 3. Check user1 can get back 3 messages
+4. Check user2 can get back 1 message
 */
 func TestMessages(t *testing.T) {
 	// Users and credentials

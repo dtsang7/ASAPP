@@ -15,24 +15,25 @@ import (
 )
 
 func main() {
+	// load config
 	env := strings.ToLower(os.Getenv("ASAPP_ENV"))
 	config, err := config.GetConfig(env)
 	if err != nil {
-		log.Println("Fail to retrieve config, exiting")
+		log.Println("Server fail to start, unable to retrieve config")
 		os.Exit(1)
 	}
-	log.Println(config)
-
+	// connect to data store
 	dao := models.CreateDAO(config.DBDriver, config.DBName)
 	dao.RunMigrations()
 
+	// Set up router
 	handler := controllers.Handler{DB: dao}
-
 	publicRouter := mux.NewRouter()
 	protectedRouter := mux.NewRouter()
 
 	mw := jwtmiddleware.New(jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+			// This should be an actual secret
 			return []byte("secret"), nil
 		},
 		SigningMethod: jwt.SigningMethodHS256,
@@ -43,7 +44,7 @@ func main() {
 	publicRouter.HandleFunc("/users", handler.UserHandler).Methods("POST")
 	publicRouter.HandleFunc("/login", handler.LoginHandler).Methods("POST")
 
-	//protected
+	//protected (jwt)
 	protectedRouter.HandleFunc("/messages", handler.SendMessageHandler).Methods("POST")
 	protectedRouter.HandleFunc("/messages", handler.GetMessagesHandler).Methods("GET")
 
@@ -53,5 +54,5 @@ func main() {
 	n := negroni.Classic()
 	n.UseHandler(publicRouter)
 	log.Println("Starting server on " + config.Port)
-	http.ListenAndServe(config.Host+":"+config.Port, n)
+	log.Fatal(http.ListenAndServe(config.Host+":"+config.Port, n))
 }

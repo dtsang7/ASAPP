@@ -34,7 +34,6 @@ func (dao *DAO) CreateUser(usr User) (int, error) {
 	}
 
 	query := "SELECT EXISTS (SELECT username FROM users WHERE username = ?)"
-
 	err = tx.QueryRow(query, username).Scan(&exist)
 	if err != nil {
 		tx.Rollback()
@@ -49,7 +48,6 @@ func (dao *DAO) CreateUser(usr User) (int, error) {
 	}
 
 	query = "INSERT INTO users (username, password) VALUES(?, ?)"
-
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(usr.Password), bcrypt.DefaultCost)
 	if err != nil {
 		tx.Rollback()
@@ -88,7 +86,6 @@ func (dao *DAO) LoginUser(existingUser User) (int, error) {
 	}
 
 	query := "SELECT uid, password FROM users WHERE username = ?"
-
 	err = tx.QueryRow(query, existingUser.Username).Scan(&uid, &dbPassword)
 	if err != nil {
 		tx.Rollback()

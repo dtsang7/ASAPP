@@ -23,7 +23,6 @@ func CreateDAO(driverName string, dataSource string) *DAO {
 }
 
 func (dao *DAO) RunMigrations() {
-
 	migrations := migrate.FileMigrationSource{
 		Dir: "db/migrations",
 	}

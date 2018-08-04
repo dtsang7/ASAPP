@@ -20,7 +20,6 @@ func (h Handler) UserHandler(w http.ResponseWriter, r *http.Request) {
 	var usr models.User
 	json.NewDecoder(r.Body).Decode(&usr)
 
-	//validate
 	err := ValidateUser(usr)
 	if err != nil {
 		WriteHttpError(err, w)
@@ -43,11 +42,9 @@ func (h Handler) UserHandler(w http.ResponseWriter, r *http.Request) {
 
 //handles login of existing user
 func (h Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	//get info from body and put in User struct
 	var existingUser models.User
 	json.NewDecoder(r.Body).Decode(&existingUser)
 
-	//validate
 	err := ValidateUser(existingUser)
 	if err != nil {
 		WriteHttpError(err, w)
