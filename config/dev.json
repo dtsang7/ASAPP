@@ -1,0 +1,7 @@
+{
+	"host": "localhost",
+	"port": "8080",
+	"db_driver": "sqlite3",
+	"db_name": "challenge.db",
+	"jwt_secret": "secret"
+}

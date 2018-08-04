@@ -20,11 +20,11 @@ type GetMessage struct {
 }
 
 type Message struct {
-	MsgID       int            `db:"msg_id"`
-	SenderID    int            `db:"sender_id"`
-	RecipientID int            `db:"recipient_id"`
+	MsgID       int            `db:"msg_id" json:"msg_id"`
+	SenderID    int            `db:"sender_id" json:"sender_id"`
+	RecipientID int            `db:"recipient_id" json:"recipient_id"`
 	Type        string         `db:"type"`
-	Message     string         `db:"msg"`
+	Message     sql.NullString `db:"msg"`
 	Width       sql.NullInt64  `db:"width"`
 	Height      sql.NullInt64  `db:"height"`
 	Url         sql.NullString `db:"i_url, v_url"`
@@ -113,7 +113,7 @@ func (dao *DAO) SendMessage(msg Message) (int, string, error) {
 	return int(msgID), timeStamp, nil
 }
 
-func (dao *DAO) GetMessages(recipient_id int, msg_id int, limit int) ([]GetMessage, error) {
+func (dao *DAO) GetMessages(recipient_id int, msg_id int, limit int) ([]Message, error) {
 
 	tx, err := dao.db.Begin()
 	if err != nil {
@@ -138,7 +138,7 @@ func (dao *DAO) GetMessages(recipient_id int, msg_id int, limit int) ([]GetMessa
 	}
 	defer res.Close()
 
-	msgs := []GetMessage{}
+	msgs := []Message{}
 
 	for res.Next() {
 		var msg Message
@@ -152,23 +152,11 @@ func (dao *DAO) GetMessages(recipient_id int, msg_id int, limit int) ([]GetMessa
 		}
 		if imageUrl.Valid {
 			msg.Url = imageUrl
-		}
-		if videoUrl.Valid {
+		} else if videoUrl.Valid {
 			msg.Url = videoUrl
 		}
 
-		msgs = append(msgs, GetMessage{
-			MsgID:       msg.MsgID,
-			SenderID:    msg.SenderID,
-			RecipientID: msg.RecipientID,
-			Type:        msg.Type,
-			Message:     msg.Message,
-			Width:       int(msg.Width.Int64),
-			Height:      int(msg.Height.Int64),
-			Source:      msg.Source.String,
-			Url:         msg.Url.String,
-			TimeStamp:   msg.TimeStamp,
-		})
+		msgs = append(msgs, msg)
 	}
 	err = res.Err()
 	if err != nil {

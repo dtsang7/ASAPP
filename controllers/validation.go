@@ -4,6 +4,8 @@ import (
 	"errors"
 	"github.com/dtsang7/ASAPP/models"
 	"log"
+	"net/http"
+	"strconv"
 )
 
 const (
@@ -11,12 +13,14 @@ const (
 	ErrorUsernameExceedSize = "error username exceed size limit"
 	ErrorPasswordExceedSize = "error password exceed size limit"
 	ErrorSourceNotSupported = "error video source not supported"
+	ErrorTypeNotSupported   = "error type of message not supported"
 )
 
 var errorMissingArgument = errors.New(ErrorMissingArgument)
 var errorUsernameExceedSize = errors.New(ErrorUsernameExceedSize)
 var errorPasswordExceedSize = errors.New(ErrorPasswordExceedSize)
 var errorSourceNotSupported = errors.New(ErrorSourceNotSupported)
+var errorTypeNotSupported = errors.New(ErrorTypeNotSupported)
 
 func ValidateUser(usr models.User) error {
 
@@ -37,41 +41,71 @@ func ValidateUser(usr models.User) error {
 	return nil
 }
 
-func ValidateSendMessage(msg models.Message) error {
-
-	if msg.SenderID == 0 || msg.RecipientID == 0 || msg.Type == "" {
+func ValidateSendMessage(req Message) error {
+	if req.SenderID <= 0 || req.RecipientID <= 0 || req.Content.Type == "" {
 		log.Println(errorMissingArgument)
 		return errorMissingArgument
 	}
 
-	switch msg.Type {
+	switch req.Content.Type {
 	case "text":
-		if msg.Message == "" {
+		if req.Content.Text == "" {
 			log.Println(errorMissingArgument)
 			return errorMissingArgument
 		}
 	case "image":
-		if int(msg.Width.Int64) == 0 || int(msg.Height.Int64) == 0 || msg.Url.String == "" {
+		if req.Content.Width <= 0 || req.Content.Height <= 0 || req.Content.Url == "" {
 			log.Println(errorMissingArgument)
 			return errorMissingArgument
 		}
 	case "video":
-		if msg.Source.String == "" || msg.Url.String == "" {
+		if req.Content.Source == "" || req.Content.Url == "" {
 			log.Println(errorMissingArgument)
 			return errorMissingArgument
 		}
-		if msg.Source.String != "youtube" || msg.Source.String != "vimeo" {
+		if req.Content.Source != "youtube" && req.Content.Source != "vimeo" {
 			log.Println(errorSourceNotSupported)
 			return errorSourceNotSupported
 		}
+	default:
+		log.Println(errorTypeNotSupported)
+		return errorTypeNotSupported
 	}
 	return nil
 }
 
-func ValidateGetMessage(r Retriever) error {
-	if r.RecipientId == 0 || r.MsgID == 0 {
-		log.Println(errorMissingArgument)
-		return errorMissingArgument
+func parsePositiveInt(str string) (int, error) {
+	intVal, parseErr := strconv.ParseInt(str, 10, 64)
+	if parseErr != nil {
+		return int(intVal), parseErr
 	}
-	return nil
+	if intVal <= 0 {
+		return 0, errorMissingArgument
+	}
+	return int(intVal), nil
+}
+
+func ParseAndValidateGetMessageRequest(r *http.Request) (req GetMessagesRequest, err error) {
+	params := r.URL.Query()
+	// parse recipient, required
+	if val, parseErr := parsePositiveInt(params.Get("recipient")); parseErr == nil {
+		req.RecipientID = val
+	} else {
+		err = parseErr
+		return
+	}
+	// parse start, required
+	if val, parseErr := parsePositiveInt(params.Get("start")); parseErr == nil {
+		req.StartMsgID = val
+	} else {
+		err = parseErr
+		return
+	}
+	// parse limit, optional
+	if val, parseErr := parsePositiveInt(params.Get("limit")); parseErr == nil {
+		req.Limit = val
+	} else {
+		req.Limit = 100
+	}
+	return
 }

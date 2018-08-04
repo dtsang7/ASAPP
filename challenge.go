@@ -3,17 +3,27 @@ package main
 import (
 	"github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/dtsang7/ASAPP/config"
 	"github.com/dtsang7/ASAPP/controllers"
 	"github.com/dtsang7/ASAPP/models"
 	"github.com/gorilla/mux"
 	"github.com/urfave/negroni"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 )
 
 func main() {
-	dao := models.CreateDAO("sqlite3", "challenge.db")
+	env := strings.ToLower(os.Getenv("ASAPP_ENV"))
+	config, err := config.GetConfig(env)
+	if err != nil {
+		log.Println("Fail to retrieve config, exiting")
+		os.Exit(1)
+	}
+	log.Println(config)
 
+	dao := models.CreateDAO(config.DBDriver, config.DBName)
 	dao.RunMigrations()
 
 	handler := controllers.Handler{DB: dao}
@@ -42,6 +52,6 @@ func main() {
 
 	n := negroni.Classic()
 	n.UseHandler(publicRouter)
-	log.Println("Starting server on 8080")
-	http.ListenAndServe(":8080", n)
+	log.Println("Starting server on " + config.Port)
+	http.ListenAndServe(config.Host+":"+config.Port, n)
 }

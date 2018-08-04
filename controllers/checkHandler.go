@@ -6,6 +6,10 @@ import (
 	"net/http"
 )
 
+type Health struct {
+	Health string `json:"health"`
+}
+
 type Handler struct {
 	DB *models.DAO
 }
@@ -25,7 +29,9 @@ func (h Handler) CheckHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(map[string]string{"health": "ok"})
+	health := Health{"ok"}
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(health)
 	if err != nil {
 		http.Error(w, "Write error", http.StatusInternalServerError)
 	}
